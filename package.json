@@ -1,0 +1,23 @@
+{
+  "name": "camsalvo",
+  "version": "0.0.1",
+  "description": "Control mobile device to fire a salvo of image shot using web technology",
+  "main": "server.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "node server.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/pureexe/CamSalvo.git"
+  },
+  "author": "Pakkapon Phongthawee",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/pureexe/CamSalvo/issues"
+  },
+  "homepage": "https://github.com/pureexe/CamSalvo#readme",
+  "dependencies": {
+    "socket.io": "^2.3.0"
+  }
+}
