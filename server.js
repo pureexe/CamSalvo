@@ -25,9 +25,13 @@ io.of('camera').on('connection',function(socket){
     camera_devices[id] = {
       'ip': socket.request.connection.remoteAddress,
       'user-agent': socket.request.headers['user-agent'],
+      'resolution': '800,600',
+      'fullres': true,
       'status': 'ready'
     }
     io.of('dashboard').emit('receive_camera', camera_devices);
+    camera_info = {'ip': socket.request.connection.remoteAddress}
+    socket.emit('camera_infomation',camera_info)
   }
   socket.on('disconnect',function(){
     if(id in camera_devices){
@@ -37,7 +41,11 @@ io.of('camera').on('connection',function(socket){
   });
   socket.on('capture',function(image_object){
     image_object['camera_id'] = socket.id
-    io.of('dashboard').to(image_object['requester_id']).emit('receive_image',image_object)
+    if(image_object['requester_id']){
+      io.of('dashboard').to(image_object['requester_id']).emit('receive_image',image_object)
+    }else{
+      io.of('dashboard').emit('receive_image',image_object)
+    }
   })
 })
 
@@ -49,5 +57,17 @@ io.of('dashboard').on('connect',function(socket){
     }else{
       io.of('camera').emit('capture',socket.id)
     }
+  })
+  socket.on('change_resolution', function(data){
+    camera_id = data.camera_id,
+    wh = data.resolution.split(',')
+    io.of('camera').to(camera_id).emit('video_resolution',{
+      width: wh[0],
+      height: wh[1]
+    })
+  })
+  socket.on('change_fullres', function(data){
+    camera_id = data.camera_id,
+    io.of('camera').to(camera_id).emit('change_fullres',data.fullres)
   })
 })
