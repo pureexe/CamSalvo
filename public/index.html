@@ -1,1 +1,101 @@
-Hello world!
+<!doctype html>
+<html lang="en">
+  <head>
+    <!-- Required meta tags -->
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+
+    <!-- Bootstrap CSS -->
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.0/css/bootstrap.min.css" integrity="sha384-9aIt2nRpC12Uk9gS9baDl411NQApFmC26EwAOH8WgZl5MYYxFfc+NcPb1dKGj7Sk" crossorigin="anonymous">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/open-iconic/1.1.1/font/css/open-iconic-bootstrap.min.css">
+    
+    <title>Hello, world!</title>
+  </head>
+  <body>
+    <div id="app">
+        <header>
+        <nav class="navbar navbar-dark bg-dark">
+            <a class="navbar-brand" href="#">
+                CamSalvo
+            </a>
+            <form class="form-inline">
+                <span class="navbar-text" style="margin-right:1em;">Take a photo! </span> 
+                <button class="btn btn-primary my-2 my-sm-0" type="submit"> <span class="oi oi-camera-slr"></span></button>
+            </form>
+        </nav>
+        </header>
+        <main>
+            <div class="container">
+                <div class="card" style="margin-top: 3rem;">
+                    <table class="table">
+                        <thead class="thead-dark">
+                            <tr>
+                                <th scope="col">IP</th>
+                                <th scope="col">action</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr v-for="(device, socket_id, index) in devices">
+                                <td>{{device.ip}}</td>
+                                <td><button class="btn btn-primary my-2 my-sm-0" v-on:click="capture(socket_id)"> <span class="oi oi-camera-slr"></span></button></td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+                <div>
+                    <div v-for="image in images">
+                        <img v-bind:src="image.data" />
+                    </div>
+                </div>
+            </div>
+        </main>
+        <footer>
+
+        </footer>
+    </div>
+
+    <!-- Optional JavaScript -->
+    <!-- jQuery first, then Popper.js, then Bootstrap JS -->
+    <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js" integrity="sha384-DfXdz2htPH0lsSSs5nCTpuj/zy4C+OGpamoFVy38MVBnE+IbbVYUew+OrCXaRkfj" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/popper.js@1.16.0/dist/umd/popper.min.js" integrity="sha384-Q6E9RHvbIyZFJoft+2mJbHaEWldlvI9IOYy5n3zV9zzTtmI3UksdQRVvoxMfooAo" crossorigin="anonymous"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.0/js/bootstrap.min.js" integrity="sha384-OgVRvuATP1z7JjHLkuOU7Xw704+h835Lr+6QL9UvYjZE3Ipu6Tp75j7Bh/kR0JKI" crossorigin="anonymous"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/2.3.0/socket.io.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/vue/dist/vue.js"></script>
+    <script>
+ 
+    </script>
+    <script>
+        var app = new Vue({
+            el: '#app',
+            data: {
+              devices: {},
+              socket: {},
+              images: []
+            },
+            mounted: function() {
+                hostname = window.location.hostname
+                socket = io('http://'+hostname+':8129/dashboard');
+                socket.on('connect', function(data){
+                    console.log('connected!')
+                    socket.emit('get_device');
+                });
+                socket.on('receive_camera', function(data){
+                    console.log(data)
+                    app.devices = data
+                })
+                self = this
+                socket.on('receive_image',function(image_obj){
+                    self.images.push(image_obj)
+                })
+                this.socket = socket
+            },
+            methods:{
+                capture: function(socket_id){
+                    this.socket.emit('capture',socket_id)
+                }
+            }
+        })
+    </script>
+
+  </body>
+</html>

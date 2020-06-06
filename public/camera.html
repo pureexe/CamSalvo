@@ -1,0 +1,111 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <!-- Required meta tags -->
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+
+    <!-- Bootstrap CSS -->
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.0/css/bootstrap.min.css" integrity="sha384-9aIt2nRpC12Uk9gS9baDl411NQApFmC26EwAOH8WgZl5MYYxFfc+NcPb1dKGj7Sk" crossorigin="anonymous">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/open-iconic/1.1.1/font/css/open-iconic-bootstrap.min.css">
+    
+    <title>Hello, world!</title>
+  </head>
+  <body style="margin:0px;">
+    <div id="app">      
+        IP: This device ip
+        <video autoplay style="width:100vw;height:100vh;"  v-on:click="toggle_fullscreen"></video>
+        <canvas style="display:none;"></canvas>
+    </div>
+
+    <!-- Optional JavaScript -->
+    <!-- jQuery first, then Popper.js, then Bootstrap JS -->
+    <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js" integrity="sha384-DfXdz2htPH0lsSSs5nCTpuj/zy4C+OGpamoFVy38MVBnE+IbbVYUew+OrCXaRkfj" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/popper.js@1.16.0/dist/umd/popper.min.js" integrity="sha384-Q6E9RHvbIyZFJoft+2mJbHaEWldlvI9IOYy5n3zV9zzTtmI3UksdQRVvoxMfooAo" crossorigin="anonymous"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.0/js/bootstrap.min.js" integrity="sha384-OgVRvuATP1z7JjHLkuOU7Xw704+h835Lr+6QL9UvYjZE3Ipu6Tp75j7Bh/kR0JKI" crossorigin="anonymous"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/2.3.0/socket.io.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/vue/dist/vue.js"></script>
+    <script>
+ 
+    </script>
+    <script>
+        var app = new Vue({
+            el: '#app',
+            data: {
+              message: "camera"
+            },
+            mounted: function() {
+                // check device support 
+                
+                if ('mediaDevices' in navigator && 'getUserMedia' in navigator.mediaDevices) {
+                    console.log("Let's get this party started")
+                }
+                
+                const video = document.querySelector('video');
+                const startStream = async (constraints) => {
+                    const stream = await navigator.mediaDevices.getUserMedia(constraints);
+                    handleStream(stream);
+                };
+                const doScreenshot = () => {
+                    const canvas = document.querySelector('canvas');
+                    canvas.width = video.videoWidth;
+                    canvas.height = video.videoHeight;
+                    canvas.getContext('2d').drawImage(video, 0, 0);
+                    image_data = canvas.toDataURL('image/webp');
+                    console.log(image_data)
+                    return image_data
+                };
+                const handleStream = (stream) => {
+                    video.srcObject = stream;
+                    hostname = window.location.hostname
+                    const socket = io('http://'+hostname+':8129/camera');
+                    socket.on('connect', function(data){
+                        console.log('connected!')
+                    });
+                    socket.on('receive_device', function(data){
+                        app.devices = data
+                    })
+                    socket.on('capture',function(requester_id){
+                        socket.emit('capture',doScreenshot())
+                    })
+
+                };
+                startStream({
+                    video: {
+                        width: {
+                            min: 1280,
+                            ideal: 1920,
+                            max: 2560,
+                        },
+                        height: {
+                            min: 720,
+                            ideal: 1080,
+                            max: 1440
+                        },
+                        facingMode: {
+                           exact: 'environment'
+                        }
+                    }
+                })
+                
+               /*
+                
+                */
+            },
+            methods: {
+                toggle_fullscreen: function(){
+                    let elem = document.querySelector("#app");
+                    if (!document.fullscreenElement) {
+                        elem.requestFullscreen().catch(err => {
+                        alert(`Error attempting to enable full-screen mode: ${err.message} (${err.name})`);
+                        });
+                    } else {
+                        document.exitFullscreen();
+                    }
+                }
+            }
+        })
+    </script>
+
+  </body>
+</html>
