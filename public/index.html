@@ -18,10 +18,10 @@
             <a class="navbar-brand" href="#">
                 CamSalvo
             </a>
-            <form class="form-inline">
+            <div class="form-inline">
                 <span class="navbar-text" style="margin-right:1em;">Take a photo! </span> 
-                <button class="btn btn-primary my-2 my-sm-0" type="submit"> <span class="oi oi-camera-slr"></span></button>
-            </form>
+                <button class="btn btn-primary my-2 my-sm-0" v-on:click="capture()"> <span class="oi oi-camera-slr"></span></button>
+            </div>
         </nav>
         </header>
         <main>
@@ -43,8 +43,15 @@
                     </table>
                 </div>
                 <div>
-                    <div v-for="image in images">
-                        <img v-bind:src="image.data" />
+                    <div class="row">
+                        <div v-for="image in images" class="col-md-2 sm-12">
+                            <div class="card" style="width: 100%">
+                                <img class="card-img-top" v-bind:src="image.data">
+                                <div class="card-body">
+                                  <p class="card-text">{{devices[image.camera_id].ip}}</p>
+                                </div>
+                              </div>
+                        </div>
                     </div>
                 </div>
             </div>

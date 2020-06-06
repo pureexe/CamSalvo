@@ -35,42 +35,19 @@ io.of('camera').on('connection',function(socket){
     }
     io.of('dashboard').emit('receive_camera', camera_devices);
   });
-  socket.on('capture',function(image_data){
-
-    io.of('dashboard').emit('receive_image', {
-      'camera_id': socket.id,
-      'data': image_data
-    })
+  socket.on('capture',function(image_object){
+    image_object['camera_id'] = socket.id
+    io.of('dashboard').to(image_object['requester_id']).emit('receive_image',image_object)
   })
 })
 
 io.of('dashboard').on('connect',function(socket){
   socket.emit('receive_camera', camera_devices);
   socket.on('capture',function(camera_id){
-    if(camera_id !== undefined){
+    if(camera_id !== undefined && camera_id !== null){
       io.of('camera').to(camera_id).emit('capture',socket.id)
+    }else{
+      io.of('camera').emit('capture',socket.id)
     }
   })
 })
-
-/*
-io.on('connection', (socket) => {
-    socket.on('get_device',function(){
-        connected_client = io.sockets.clients().connected
-        console.log(connected_client.id)
-        return;
-        console.log('get_device!')
-        device_data = [
-            {'ip':1,'status':'ready'}
-        ]
-        socket.emit('receive_device',device_data)
-    })
-  socket.on('my other event', (data) => {
-    var address = socket.request.connection.remoteAddress;
-    console.log(address)
-    console.log(data);
-  });
-  socket.on('disconnect', function() {
-  })
-});
-*/

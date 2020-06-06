@@ -13,7 +13,6 @@
   </head>
   <body style="margin:0px;">
     <div id="app">      
-        IP: This device ip
         <video autoplay style="width:100vw;height:100vh;"  v-on:click="toggle_fullscreen"></video>
         <canvas style="display:none;"></canvas>
     </div>
@@ -32,28 +31,27 @@
         var app = new Vue({
             el: '#app',
             data: {
-              message: "camera"
             },
             mounted: function() {
+                /*
                 // check device support 
-                
                 if ('mediaDevices' in navigator && 'getUserMedia' in navigator.mediaDevices) {
                     console.log("Let's get this party started")
                 }
+                */
                 
                 const video = document.querySelector('video');
                 const startStream = async (constraints) => {
                     const stream = await navigator.mediaDevices.getUserMedia(constraints);
                     handleStream(stream);
                 };
-                const doScreenshot = () => {
+                const doScreenshot = (callback) => {
                     const canvas = document.querySelector('canvas');
                     canvas.width = video.videoWidth;
                     canvas.height = video.videoHeight;
                     canvas.getContext('2d').drawImage(video, 0, 0);
                     image_data = canvas.toDataURL('image/webp');
-                    console.log(image_data)
-                    return image_data
+                    callback(image_data);
                 };
                 const handleStream = (stream) => {
                     video.srcObject = stream;
@@ -62,11 +60,13 @@
                     socket.on('connect', function(data){
                         console.log('connected!')
                     });
-                    socket.on('receive_device', function(data){
-                        app.devices = data
-                    })
                     socket.on('capture',function(requester_id){
-                        socket.emit('capture',doScreenshot())
+                        doScreenshot(function(image_data){
+                            socket.emit('capture',{
+                                'requester_id': requester_id,
+                                'data': image_data,
+                            })
+                        })
                     })
 
                 };
@@ -87,10 +87,7 @@
                         }
                     }
                 })
-                
-               /*
-                
-                */
+
             },
             methods: {
                 toggle_fullscreen: function(){
