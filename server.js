@@ -9,12 +9,22 @@ function handler (req, res) {
   (err, data) => {
     if (err) {
       res.writeHead(500);
-      return res.end('Error loading socket_serverhtml');
+      return res.end('Error loading socket_server.html');
     }
 
     res.writeHead(200);
     res.end(data);
   });
+}
+
+function saveImage(filename, base64data){
+  setTimeout(function(){ //use non-blocking io
+    //base64data = base64data.replace(/^data:image\/jpge;base64,/, "");
+    base64data = base64data.split(';base64,').pop()
+    fs.writeFile('image.jpg', base64data, {encoding: 'base64'}, function(err) {
+      console.log('File created');
+    });
+  },0); 
 }
 
 dashboard_device = {}
@@ -40,7 +50,8 @@ io.of('camera').on('connection',function(socket){
     io.of('dashboard').emit('receive_camera', camera_devices);
   });
   socket.on('capture',function(image_object){
-    image_object['camera_id'] = socket.id
+    image_object['camera_id'] = socket.id;
+    saveImage("data/image.jpg",image_object['data']);
     if(image_object['requester_id']){
       io.of('dashboard').to(image_object['requester_id']).emit('receive_image',image_object)
     }else{
