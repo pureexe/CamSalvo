@@ -5,134 +5,109 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
 
-    <!-- Bootstrap CSS -->
-    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.0/css/bootstrap.min.css" integrity="sha384-9aIt2nRpC12Uk9gS9baDl411NQApFmC26EwAOH8WgZl5MYYxFfc+NcPb1dKGj7Sk" crossorigin="anonymous">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/open-iconic/1.1.1/font/css/open-iconic-bootstrap.min.css">
+    <!-- Bluma -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bulma@0.9.3/css/bulma.min.css">
     
-    <title>Camera device - CamSalvo</title>
+    <title>Camera - CamSalvo</title>
   </head>
-  <body style="margin:0px;background-color:#000">
-    <div id="app">      
-        <p style="position: fixed; left: 50%; transform: translate(-50%, 0);color:#fff"><b>IP {{camera_infomation.ip}}</b></p>
-        <video autoplay style="width:100vw;height:100vh;"  v-on:click="toggle_fullscreen"></video>
-        <canvas style="display:none;"></canvas>
+  <body>
+    <div id="app">
+        <section class="hero is-dark is-fullheight" v-show="page == 'setup'">
+            <div class="hero-body">
+              <div class="">
+                <p class="title">
+                  Device name
+                </p>
+                <input class="input is-primary" type="text" placeholder="Name to show in dashboard" style="margin-bottom: 1.5rem;" v-model="device.name">
+                <button class="button is-primary" :disabled="device.name.length == 0" v-on:click="page_camera">Next</button>
+              </div>
+            </div>
+        </section>
+        <div v-show="page == 'camera'" ref="page-camera">
+            <video autoplay style="width:100vw;height:100vh;" ref="video-canvas"></video>
+        </div>
     </div>
 
     <!-- Optional JavaScript -->
     <!-- jQuery first, then Popper.js, then Bootstrap JS -->
-    <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js" integrity="sha384-DfXdz2htPH0lsSSs5nCTpuj/zy4C+OGpamoFVy38MVBnE+IbbVYUew+OrCXaRkfj" crossorigin="anonymous"></script>
-    <script src="https://cdn.jsdelivr.net/npm/popper.js@1.16.0/dist/umd/popper.min.js" integrity="sha384-Q6E9RHvbIyZFJoft+2mJbHaEWldlvI9IOYy5n3zV9zzTtmI3UksdQRVvoxMfooAo" crossorigin="anonymous"></script>
-    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.0/js/bootstrap.min.js" integrity="sha384-OgVRvuATP1z7JjHLkuOU7Xw704+h835Lr+6QL9UvYjZE3Ipu6Tp75j7Bh/kR0JKI" crossorigin="anonymous"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/2.3.0/socket.io.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/vue/dist/vue.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.3.2/socket.io.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/vue/3.2.20/vue.global.min.js"></script>
     <script>
  
     </script>
     <script>
-        var app = new Vue({
-            el: '#app',
-            data: {
-                camera_infomation: {},
-                use_full_resolution: true
+        const CameraApp = {
+            data(){
+                return {
+                    dashboards: {},
+                    socket: undefined,
+                    config: undefined,
+                    page: "setup",
+                    device: {
+                        name: "",
+                    }
+                }
             },
-            mounted: function() {
-                if (!('mediaDevices' in navigator && 'getUserMedia' in navigator.mediaDevices)){
-                    this.can_use_camera = false;
-                    return;
-                }
-                socket_util = function(track, imageCapture, max_width, max_height){
-                    hostname = window.location.hostname
-                    const socket = io('http://'+hostname+':8129/camera');
-                    socket.on('connect', function(data){
-                    });
-                    socket.on('camera_infomation', function(data){
-                        app.camera_infomation = data
-                    });
-                    socket.on('change_fullres', function(data){
-                        app.use_full_resolution = data
-                    });
-                    socket.on('video_resolution', function(data){
-                        track.applyConstraints({
-                            width: data.width,
-                            height: data.height
-                        });
-                    })
-                    takePhoto = function(callback) {
-                        if(app.use_full_resolution){
-                            imageCapture.takePhoto({
-                                fillLightMode: 'off',                              
-                                imageHeight: max_height,
-                                imageWidth: max_width
-                            })
-                            .then(function(blob){
-                                var reader = new window.FileReader();
-                                reader.readAsDataURL(blob);
-                                reader.onloadend = function () {
-                                    callback(reader.result);
-                                }
-                            });
-                        }else{
-                            imageCapture.grabFrame()
-                            .then(function(img) {
-                                const canvas = document.querySelector('canvas');
-                                canvas.width = img.width;
-                                canvas.height = img.height;
-                                canvas.getContext('2d').drawImage(img, 0, 0)
-                                image_data = canvas.toDataURL('image/jpeg');
-                                callback(image_data);
-                            })
-                        }                                                         
-                    }
-                    socket.on('capture',function(requester_id){
-                        takePhoto(function(image_data){
-                            socket.emit('capture',{
-                                'requester_id': requester_id,
-                                'data': image_data,
-                            })
-                        })
-                    })
-                }
-                navigator.mediaDevices.getUserMedia({
-                    'video': {
-                        'width': {
-                            'ideal': 800,
-                        },
-                        'height': {
-                            'ideal': 600,
-                        },
-                        'facingMode': {
-                             'exact': 'environment'
-                        }
-                    }
-                }).then(function(mediaStream){
-                    document.querySelector('video').srcObject = mediaStream;
-                    const track = mediaStream.getVideoTracks()[0];
-                    const settings = track.getSettings();
-                    const capabilities = track.getCapabilities();
-                    imageCapture = new ImageCapture(track);
-                    imageCapture.getPhotoCapabilities().then(function(photoCapabilities){
-                        socket_util(
-                            track,
-                            imageCapture,
-                            photoCapabilities.imageWidth.max,
-                            photoCapabilities.imageHeight.max
-                        );
-                    });
-                });
+            mounted(){
             },
             methods: {
-                toggle_fullscreen: function(){
-                    let elem = document.querySelector("#app");
-                    if (!document.fullscreenElement) {
-                        elem.requestFullscreen().catch(function(err) {
-                        alert(`Error attempting to enable full-screen mode: ${err.message} (${err.name})`);
-                        });
-                    } else {
-                        document.exitFullscreen();
-                    }
+                async connect(){
+                    response = await fetch('config.json'); 
+                    if(!response.ok) return this.dialogue("Error: could not load config.json");
+                    this.config = await response.json();
+                    this.init_socket();
+                },
+                init_socket(){
+                    self = this;
+                    socket_url = 'ws://'+this.config.socket_server.address+':'+this.config.socket_server.port+'/camera';
+                    console.log(socket_url);
+                    this.socket = io(socket_url)
+                    this.socket.on('connect', ()=>{
+                        console.log("CONNECTED")
+                    });
+                    this.socket.on('connect_error', error=>self.dialogue('could not conenct to socket server. please verify that node.js is up and running with proper config.js'))
+                    this.socket.on('reconnect_failed', error=>self.dialogue('internete disconnect! you might move your phone to far away from internet access point'))
+                    this.socket.on('add_dashboard', this.add_dashboard)
+                    this.socket.on('remove_dashboard', this.remove_dashboard)                    
+                },
+                dialogue(message){
+                    alert(message);
+                },
+                add_dashboard(data){
+                    data['dashboard_ids']
+                }, 
+                remove_dashboard(data){
+                    self = this;
+                    data['dashboard_ids'].forEach(id=>{
+                        delete self.dashboards[id]
+                    })
+                },
+                async page_camera(){
+                    this.page = 'camera';
+                    await this.$refs['page-camera'].requestFullscreen({navigationUI: 'hide'}).catch(() => dialogue('Cannot request fullscreen'))  
+                    console.log(this.config.preview);                  
+                    mediaStream = await navigator.mediaDevices.getUserMedia({"video": this.config.preview})
+                    this.$refs['video-canvas'].srcObject = mediaStream
+                    track = mediaStream.getVideoTracks()[0];
+                    this.device['track'] = track
+                    this.device['settings'] = track.getSettings();
+                    this.device['capabilities'] = track.getCapabilities();
+                    this.connect();
+                },
+                async call_dashboard(dashboard_id){
+                    // make RTC call to dashboard
+                    peerConnection = new RTCPeerConnection(this.camera);
+                    const offer = await peerConnection.createOffer();
+                    await peerConnection.setLocalDescription(new RTCSessionDescription(offer));
+                    io.of('dashboard').to(dashboard_id).emit('rtc_call', {"offer": offer});
+                },
+                async answer_dashboard(data){
+                    dashboard_id = data['dashboard_id']
+                    aw
                 }
             }
-        })
+        }
+        Vue.createApp(CameraApp).mount('#app')        
     </script>
 
   </body>

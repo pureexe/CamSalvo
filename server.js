@@ -1,22 +1,75 @@
 const app = require('http').createServer(handler)
-const io = require('socket.io')(app);
 const fs = require('fs');
-
-app.listen(8129);
-
+const config = require('./config.json')
+const io = require('socket.io')(app, {cors: {
+    origin: "*",
+    methods: ["GET", "POST"]
+}});
+// utility function
 function handler (req, res) {
-  fs.readFile(__dirname + '/public/socket_server.html',
-  (err, data) => {
-    if (err) {
-      res.writeHead(500);
-      return res.end('Error loading socket_server.html');
+  fs.readFile(
+    __dirname + '/public/error.html',
+    (err, data) => {
+      if (err) {
+        res.writeHead(500);
+        return res.end('Error loading error.html');
+      }
+      res.writeHead(200);
+      res.end(data);
     }
+  );
+}
+app.listen(config.socket_server.port);
+function createClinetConfig(){
+  client_config = JSON.parse(JSON.stringify(config)) //deep copy object
+  delete client_config['path']; //delete sensitive information
+  fs.writeFile(config.path.public + '/config.json',JSON.stringify(client_config),function(err){
+    if(err) throw err;
+  })
+}
+createClinetConfig()
 
-    res.writeHead(200);
-    res.end(data);
-  });
+// global variable
+devices = {
+    dashboard: {},
+    camera: {},
 }
 
+
+// socket implementation
+io.of('dashboard').on('connection', (socket)=>{
+    if(!(socket.id in devices["dashboard"])){
+        devices['dashboard'][socket.id] = socket
+        cameras = Object.keys(devices['camera']);
+        socket.emit('add_camera', {"camera_ids" : cameras})
+        cameras.forEach(id=>{
+            devices['camera'][id].emit('add_dashboard', {"dashboard_ids": [socket.id]});
+        })
+        socket.on('disconnect',function(){
+            if(socket.id in devices['dashboard']){
+              delete devices['dashboard'][socket.id]
+            }
+            io.of('dashboard').emit('remove_dashboard', {"dashboard_ids": [socket.id]});
+        });
+    }
+});
+io.of('camera').on('connection', (socket)=>{
+    if(!(socket.id in devices.camera)){
+        devices['camera'][socket.id] = socket
+        dashboards = Object.keys(devices['dashboard']);
+        socket.emit('add_dashboard', {"dashboard_ids" : [dashboards]})
+        dashboards.forEach(id=>{
+            io.of('dashboard').to(id).emit('add_dashboard', {"cameras_id": [socket.id]});
+        });
+    }
+    socket.on('disconnect',function(){
+        if(socket.id in devices['dashboard']){
+          delete devices['dashboard'][socket.id]
+        }
+        io.of('camera').emit('remove_camera', {"camera_ids": [socket.id]});
+    });
+});
+/*
 function saveImage(filename, base64data){
   setTimeout(function(){ //use non-blocking io
     //base64data = base64data.replace(/^data:image\/jpge;base64,/, "");
@@ -26,7 +79,8 @@ function saveImage(filename, base64data){
     });
   },0); 
 }
-
+*/
+/*
 dashboard_device = {}
 camera_devices = {}
 io.of('camera').on('connection',function(socket){
@@ -82,3 +136,4 @@ io.of('dashboard').on('connect',function(socket){
     io.of('camera').to(camera_id).emit('change_fullres',data.fullres)
   })
 })
+*/

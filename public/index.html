@@ -5,84 +5,71 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
 
-    <!-- Bootstrap CSS -->
-    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.0/css/bootstrap.min.css" integrity="sha384-9aIt2nRpC12Uk9gS9baDl411NQApFmC26EwAOH8WgZl5MYYxFfc+NcPb1dKGj7Sk" crossorigin="anonymous">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/open-iconic/1.1.1/font/css/open-iconic-bootstrap.min.css">
+    <!-- Bluma -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bulma@0.9.3/css/bulma.min.css">
     
     <title>Dashboard - CamSalvo</title>
   </head>
   <body>
     <div id="app">
         <header>
-        <nav class="navbar navbar-dark bg-dark">
-            <a class="navbar-brand" href="#">
-                CamSalvo
-            </a>
-            <div class="form-inline">
-                <span class="navbar-text" style="margin-right:1em;">Shot a salvo! </span> 
-                <button class="btn btn-success my-2 my-sm-0" v-on:click="capture()"> <span class="oi oi-camera-slr"></span></button>
-            </div>
-        </nav>
+            <nav class="navbar is-dark" role="navigation" aria-label="main navigation">
+                <div class="navbar-brand">
+                  <a class="navbar-item" href="#">
+                    CamSalvo
+                  </a>
+              
+                  <a role="button" class="navbar-burger" aria-label="menu" aria-expanded="false" data-target="navbarBasicExample">
+                    <span aria-hidden="true"></span>
+                    <span aria-hidden="true"></span>
+                    <span aria-hidden="true"></span>
+                  </a>
+                </div>
+              
+                <div id="navbarBasicExample" class="navbar-menu">
+                  <div class="navbar-start">
+                    
+                  </div>
+                  <div class="navbar-end">
+                    <div class="navbar-item">
+                      <div class="buttons">
+                        <a class="button is-primary">
+                          <strong>Capture all!</strong>
+                        </a>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </nav>
         </header>
         <main>
-            <div class="container">
-                <div class="card" style="margin-top: 2rem;margin-bottom: 2rem;">
-                    <table class="table" style="margin-bottom: 0px;">
-                        <thead class="thead-dark">
-                            <tr>
-                                <th scope="col">IP</th>
-                                <th scope="col">Resolution</th>
-                                <th scope="col">Full-Res</th>
-                                <th scope="col"></th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <tr v-for="(camera, socket_id, index) in cameras">
-                                <td>
-                                    <p>{{camera.ip}}</p>
-                                </td>
-                                <td>
-                                    <div class="form-group" style="margin-bottom: 0px;">
-                                        <select class="form-control" v-model="cameras[socket_id].resolution" v-on:change="change_resolution(socket_id)">
-                                          <option value="800,600"> 800 x 600 (4:3) </option>
-                                          <option value="1920,1080"> 1080p (16:9) </option>
-                                        </select>
-                                      </div>
-                                </td>
-                                <td>
-                                    <div class="custom-control custom-switch">
-                                        <input type="checkbox" class="custom-control-input" v-bind:id="'fullres-'+socket_id"  v-model="cameras[socket_id].fullres" v-on:change="change_fullres(socket_id)">
-                                        <label class="custom-control-label" v-bind:for="'fullres-'+socket_id"></label>
-                                    </div>
-                                </td>
-                                <td  style="text-align: right;">
-                                    <button class="btn btn-primary my-2 my-sm-0" v-on:click="capture(socket_id)"> <span class="oi oi-camera-slr"></span></button>
-                                </td>
-                            </tr>
-                            <tr v-if="Object.keys(cameras).length === 0" >
-                                <td style="text-align: center;" colspan="4">
-                                    No camera connection.
-                                </td>
-                            </tr>
-                            
-                        </tbody>
-                    </table>
-                </div>
-                <div>
-                    <div class="row">
-                        <div v-for="column in 4" class="col-3">
-                                <div  v-for="(image, index) in images" v-if="index % 4 == (column-1)" class="card" style="width: 100%; position:relative">
-                                    <p style="position: absolute; right: 0px; color:#fff;margin-left: auto;
-                                    margin-right: auto;left: 0;text-align: center;">
-                                        Image {{index}} - {{cameras[image.camera_id].ip}}
-                                    </p>
-                                    <img class="card-img-top" v-bind:src="image.data">
-                                </div>
-                        </div>
-                    </div>
-                </div>
+            <div class="columns is-multiline" style="padding: 10px;">
+                <div class="column is-one-quarter-desktop is-half-tablet">
+                  <div class="card">
+                    <header class="card-header">
+                        <p class="card-header-title">
+                          Card header
+                        </p>
+                        <button class="card-header-icon" aria-label="more options">
+                          <span class="icon">
+                            <i class="fas fa-angle-down" aria-hidden="true"></i>
+                          </span>
+                        </button>
+                      </header>
+                      <div class="card-image">
+                          <figure class="image is-3by2">
+                            <img src="https://unsplash.it/300/200/?random&pic=1" alt="">
+                          </figure>
+                      </div>
+                      <footer class="card-footer">
+                          <a class="card-footer-item">
+                            Capture
+                          </a>
+                      </footer>
+                  </div>
+                </div>    
             </div>
-        </main>
+         </main>
         <footer>
 
         </footer>
@@ -90,57 +77,57 @@
 
     <!-- Optional JavaScript -->
     <!-- jQuery first, then Popper.js, then Bootstrap JS -->
-    <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js" integrity="sha384-DfXdz2htPH0lsSSs5nCTpuj/zy4C+OGpamoFVy38MVBnE+IbbVYUew+OrCXaRkfj" crossorigin="anonymous"></script>
-    <script src="https://cdn.jsdelivr.net/npm/popper.js@1.16.0/dist/umd/popper.min.js" integrity="sha384-Q6E9RHvbIyZFJoft+2mJbHaEWldlvI9IOYy5n3zV9zzTtmI3UksdQRVvoxMfooAo" crossorigin="anonymous"></script>
-    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.0/js/bootstrap.min.js" integrity="sha384-OgVRvuATP1z7JjHLkuOU7Xw704+h835Lr+6QL9UvYjZE3Ipu6Tp75j7Bh/kR0JKI" crossorigin="anonymous"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/2.3.0/socket.io.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/vue/dist/vue.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.3.2/socket.io.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/vue/3.2.20/vue.global.min.js"></script>
     <script>
  
     </script>
     <script>
-        var app = new Vue({
-            el: '#app',
-            data: {
-              cameras: {},
-              socket: {},
-              images: []
+        const DashboardApp = {
+            data(){
+                return {
+                    camearas: {},
+                    socket: undefined,
+                    config: undefined
+                }
             },
-            mounted: function() {
-                hostname = window.location.hostname
-                socket = io('http://'+hostname+':8129/dashboard');
-                socket.on('connect', function(data){
-                    console.log('connected!')
-                    socket.emit('get_device');
-                });
-                socket.on('receive_camera', function(data){
+            mounted(){
+                this.connect();
+            },
+            methods: {
+                async connect(){
+                    response = await fetch('config.json'); 
+                    if(!response.ok) return this.dialogue("Error: could not load config.json");
+                    this.config = await response.json();
+                    this.init_socket();
+                },
+                init_socket(){
+                    self = this;
+                    socket_url = 'ws://'+this.config.socket_server.address+':'+this.config.socket_server.port+'/dashboard';
+                    console.log(socket_url);
+                    this.socket = io(socket_url)
+                    this.socket.on('connect', ()=>{
+                        console.log("CONNECTED")
+                    });
+                    this.socket.on('connect_error', error=>self.dialogue('could not conenct to socket server. please verify that node.js is up and running with proper config.js'))
+                    this.socket.on('reconnect_failed', error=>self.dialogue('internete disconnect! you might move your phone to far away from internet access point'))
+                    this.socket.on('add_camera', this.add_camera)
+                    this.socket.on('remove_camera', this.remove_camera)                    
+                },
+                dialogue(message){
+                    alert(message);
+                },
+                add_camera(data){
+                    console.log('ADD camera')
                     console.log(data)
-                    app.cameras = data
-                })
-                self = this
-                socket.on('receive_image',function(image_obj){
-                    self.images.push(image_obj)
-                })
-                this.socket = socket
-            },
-            methods:{
-                capture: function(camera_id){
-                    this.socket.emit('capture',camera_id)
-                },
-                change_resolution: function(camera_id){
-                    this.socket.emit('change_resolution',{
-                        'camera_id': camera_id,
-                        'resolution': this.cameras[camera_id].resolution
-                    })
-                },
-                change_fullres: function(camera_id){
-                    this.socket.emit('change_fullres',{
-                        'camera_id': camera_id,
-                        'fullres': this.cameras[camera_id].fullres
-                    })
+                }, 
+                remove_camera(data){
+                    console.log('remove camera')
+                    console.log(data)
                 }
             }
-        })
+        }
+        Vue.createApp(DashboardApp).mount('#app')        
     </script>
 
   </body>

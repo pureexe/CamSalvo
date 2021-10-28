@@ -1,0 +1,25 @@
+{
+    "path": {
+        "public": "public",
+        "images": "images",
+        "database": "database.db"
+    },
+    "preview": {        
+        "width": {
+            "ideal": 800
+        },
+        "height": {
+            "ideal": 600
+        },
+        "facingMode": {
+            "ideal": "environment"
+        }
+    },
+    "socket_server": {
+        "address": "10.204.227.47",
+        "port": 8192
+    },
+    "web_rtc": {
+        "iceServers":[]
+    }
+}
