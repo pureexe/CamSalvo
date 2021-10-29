@@ -12,69 +12,88 @@
   </head>
   <body>
     <div id="app">
+      <div v-show="page == 'dashboard'">
         <header>
-            <nav class="navbar is-dark" role="navigation" aria-label="main navigation">
-                <div class="navbar-brand">
-                  <a class="navbar-item" href="#">
-                    CamSalvo
-                  </a>
-              
-                  <a role="button" class="navbar-burger" aria-label="menu" aria-expanded="false" data-target="navbarBasicExample">
-                    <span aria-hidden="true"></span>
-                    <span aria-hidden="true"></span>
-                    <span aria-hidden="true"></span>
-                  </a>
+          <nav class="navbar is-dark" role="navigation" aria-label="main navigation">
+              <div class="navbar-brand">
+                <a class="navbar-item" href="#">
+                  CamSalvo
+                </a>
+            
+                <a role="button" class="navbar-burger" aria-label="menu" aria-expanded="false" data-target="navbarBasicExample">
+                  <span aria-hidden="true"></span>
+                  <span aria-hidden="true"></span>
+                  <span aria-hidden="true"></span>
+                </a>
+              </div>
+            
+              <div id="navbarBasicExample" class="navbar-menu">
+                <div class="navbar-start">
+                  
                 </div>
-              
-                <div id="navbarBasicExample" class="navbar-menu">
-                  <div class="navbar-start">
-                    
-                  </div>
-                  <div class="navbar-end">
-                    <div class="navbar-item">
-                      <div class="buttons">
-                        <a class="button is-primary">
-                          <strong>Capture all!</strong>
-                        </a>
-                      </div>
+                <div class="navbar-end">
+                  <div class="navbar-item">
+                    <div class="buttons">
+                      <a class="button is-primary">
+                        <strong>Capture all!</strong>
+                      </a>
                     </div>
                   </div>
                 </div>
-              </nav>
-        </header>
-        <main>
-            <div class="columns is-multiline" style="padding: 10px;">
-                <div class="column is-one-quarter-desktop is-half-tablet">
-                  <div class="card">
-                    <header class="card-header">
-                        <p class="card-header-title">
-                          Card header
-                        </p>
-                        <button class="card-header-icon" aria-label="more options">
-                          <span class="icon">
-                            <i class="fas fa-angle-down" aria-hidden="true"></i>
-                          </span>
-                        </button>
-                      </header>
-                      <div class="card-image">
-                          <figure class="image is-3by2">
-                            <img src="https://unsplash.it/300/200/?random&pic=1" alt="">
-                          </figure>
-                      </div>
-                      <footer class="card-footer">
-                          <a class="card-footer-item">
-                            Capture
-                          </a>
-                      </footer>
-                  </div>
-                </div>    
+              </div>
+            </nav>
+      </header>
+      <main>
+          <div class="columns is-multiline" style="padding: 10px;">
+              <div class="column is-one-quarter-desktop is-half-tablet">
+                <div class="card">
+                  <header class="card-header">
+                      <p class="card-header-title">
+                        Card header
+                      </p>
+                      <button class="card-header-icon" aria-label="more options">
+                        <span class="icon">
+                          <i class="fas fa-angle-down" aria-hidden="true"></i>
+                        </span>
+                      </button>
+                    </header>
+                    <div class="card-image">
+                        <!-- 
+                        <figure class="image is-3by2">
+                          <img src="https://unsplash.it/300/200/?random&pic=1" alt="">
+                        </figure>
+                        -->
+                        <video class="video is-4by3" ref="video-canvas"></video>
+                    </div>
+                    <footer class="card-footer">
+                        <a class="card-footer-item">
+                          Capture
+                        </a>
+                    </footer>
+                </div>
+              </div>    
+          </div>
+       </main>
+      <footer>
+
+      </footer>
+
+      </div>
+      <div v-show="page == 'dialogue'">        
+        <section class="hero is-fullheight" :class="page_dialogue.type">
+          <div class="hero-body">
+            <div class="">
+              <p class="title">
+                {{ page_dialogue.title }}
+              </p>
+              <p class="subtitle">
+                {{ page_dialogue.subtitle }}
+              </p>
             </div>
-         </main>
-        <footer>
-
-        </footer>
+          </div>
+        </section>
+      </div>
     </div>
-
     <!-- Optional JavaScript -->
     <!-- jQuery first, then Popper.js, then Bootstrap JS -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.3.2/socket.io.min.js"></script>
@@ -86,9 +105,15 @@
         const DashboardApp = {
             data(){
                 return {
-                    camearas: {},
+                    cameras: {},
                     socket: undefined,
-                    config: undefined
+                    config: undefined,
+                    page: 'dashboard',
+                    page_dialogue: {
+                      title: '',
+                      subtitle: '',
+                      type: 'is-danger'
+                    }
                 }
             },
             mounted(){
@@ -97,7 +122,7 @@
             methods: {
                 async connect(){
                     response = await fetch('config.json'); 
-                    if(!response.ok) return this.dialogue("Error: could not load config.json");
+                    if(!response.ok) return this.dialogue("Error: could not load config.json", "make sure you start socket server with  `npm run start`");
                     this.config = await response.json();
                     this.init_socket();
                 },
@@ -113,21 +138,76 @@
                     this.socket.on('reconnect_failed', error=>self.dialogue('internete disconnect! you might move your phone to far away from internet access point'))
                     this.socket.on('add_camera', this.add_camera)
                     this.socket.on('remove_camera', this.remove_camera)                    
+                    this.socket.on('rtc_call', this.answer_camera)
                 },
-                dialogue(message){
-                    alert(message);
+                dialogue(title, subtitle='', type='is-danger'){
+                  this.page = 'dialogue'
+                  this.page_dialogue.title = title
+                  this.page_dialogue.subtitle = subtitle,
+                  this.page_dialogue.type = type
                 },
                 add_camera(data){
-                    console.log('ADD camera')
-                    console.log(data)
+                    self = this;
+                    Object.keys(data['devices_camera']).forEach(id=>{
+                        if(!(id in self.cameras)){
+                            self.cameras[id] = data['devices_camera'][id]
+                        }
+                    })
                 }, 
                 remove_camera(data){
                     console.log('remove camera')
                     console.log(data)
+                },
+                async answer_camera(data){
+                  // answer camera RTC
+                  console.log('GET RTC CALLED') 
+                  console.log(data);                 
+                  self = this;
+                  camera_id = data['sender']
+                  if(!(camera_id in this.cameras)){
+                    this.dialogue('Camera sender not register')
+                  }
+                  peerConnection = new RTCPeerConnection(this.config.web_rtc);
+                  peerConnection.addEventListener('connectionstatechange', event => {
+                        console.log("PEER STATE: "+peerConnection.connectionState)
+                  });
+                  /*
+                  peerConnection.addEventListener('icecandidate', event => {
+                    if (!event || !event.candidate) return;
+                    socket.emit("iceCandidate", {"candidate":event.candidate);
+                  });
+                  */
+                  
+                  peerConnection.onicegatheringstatechange = (e)=>{console.log("onicegatheringstatechange change"); console.log(e)}
+                  peerConnection.onsignalingstatechange = (e)=>{console.log("onsignalingstatechange change"); console.log(e)}
+                  peerConnection.onnegotiationneeded = (e)=>{console.log("onnegotiationneeded change"); console.log(e)}
+                  
+                  this.socket.on("receive_ice_candaite", (data)=>{
+                    peerConnection.addIceCandidate(new RTCIceCandidate(data['candidate']))
+                  });
+                  await peerConnection.setRemoteDescription(new RTCSessionDescription(data.offer));
+                  /*
+                  peerConnection.ontrack = stream => {
+                    console.log("ON TRACK STREAM")
+                    self.$refs['video-canvas'].srcObject = stream;                    
+                  }
+                  */
+                  peerConnection.addEventListener('track', async (event) => { 
+                    console.log("TRACKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKK");
+                  });
+                  peerConnection.addTransceiver('video');
+                  peerConnection.getTransceivers().forEach(t => t.direction = 'recvonly');
+                  answer = await peerConnection.createAnswer();
+                  await peerConnection.setLocalDescription(new RTCSessionDescription(answer));
+
+                  self.cameras[camera_id]['peerConnection'] = peerConnection 
+                  delete data['offer'];
+                  data['answer'] = answer
+                  this.socket.emit('rtc_answer',data)
                 }
             }
         }
-        Vue.createApp(DashboardApp).mount('#app')        
+        window.dashboardApp = Vue.createApp(DashboardApp).mount('#app')        
     </script>
 
   </body>

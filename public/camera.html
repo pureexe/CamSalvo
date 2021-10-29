@@ -51,11 +51,10 @@
             mounted(){
             },
             methods: {
-                async connect(){
+                async init_config(){
                     response = await fetch('config.json'); 
                     if(!response.ok) return this.dialogue("Error: could not load config.json");
                     this.config = await response.json();
-                    this.init_socket();
                 },
                 init_socket(){
                     self = this;
@@ -63,18 +62,26 @@
                     console.log(socket_url);
                     this.socket = io(socket_url)
                     this.socket.on('connect', ()=>{
-                        console.log("CONNECTED")
+                        self.socket.emit('set_config', {'name': self.device.name});
                     });
                     this.socket.on('connect_error', error=>self.dialogue('could not conenct to socket server. please verify that node.js is up and running with proper config.js'))
                     this.socket.on('reconnect_failed', error=>self.dialogue('internete disconnect! you might move your phone to far away from internet access point'))
                     this.socket.on('add_dashboard', this.add_dashboard)
-                    this.socket.on('remove_dashboard', this.remove_dashboard)                    
+                    this.socket.on('remove_dashboard', this.remove_dashboard) 
+                    this.socket.on('rtc_answer', this.answer_dashboard)                    
                 },
                 dialogue(message){
                     alert(message);
                 },
-                add_dashboard(data){
-                    data['dashboard_ids']
+                async add_dashboard(data){
+                    self = this;
+                    console.log(self.dashboards);
+                    data['dashboard_ids'].forEach(async id=>{
+                        if(!(id in self.dashboards)){
+                            peer = await self.call_dashboard(id);
+                            self.dashboards[id] = {'peerConnection': peer}
+                        }
+                    })
                 }, 
                 remove_dashboard(data){
                     self = this;
@@ -84,26 +91,56 @@
                 },
                 async page_camera(){
                     this.page = 'camera';
-                    await this.$refs['page-camera'].requestFullscreen({navigationUI: 'hide'}).catch(() => dialogue('Cannot request fullscreen'))  
-                    console.log(this.config.preview);                  
-                    mediaStream = await navigator.mediaDevices.getUserMedia({"video": this.config.preview})
-                    this.$refs['video-canvas'].srcObject = mediaStream
-                    track = mediaStream.getVideoTracks()[0];
-                    this.device['track'] = track
+                    await this.init_config();
+                    await this.init_camera();
+                    //await this.$refs['page-camera'].requestFullscreen({navigationUI: 'hide'}).catch(() => dialogue('Cannot request fullscreen'))  
+                    await this.init_socket();
+                },
+                async init_camera(){
+                    stream = await navigator.mediaDevices.getUserMedia({"video": this.config.preview})
+                    this.$refs['video-canvas'].srcObject = stream
+                    track = stream.getVideoTracks()[0];
+                    this.device['stream'] = stream;
+                    this.device['track'] = track;
                     this.device['settings'] = track.getSettings();
                     this.device['capabilities'] = track.getCapabilities();
-                    this.connect();
                 },
                 async call_dashboard(dashboard_id){
                     // make RTC call to dashboard
-                    peerConnection = new RTCPeerConnection(this.camera);
+                    self = this;
+                    peerConnection = new RTCPeerConnection(this.config.web_rtc);
+                    /*
+                    this.device['stream'].getTracks().forEach(track =>{
+                        console.log("ADD TRACK");
+                        peerConnection.addTrack(track, self.device['stream'])
+                    });
+                    */
+                    peerConnection.addTransceiver(this.device['track']);
+                    peerConnection.getTransceivers().forEach(t => t.direction = 'sendonly');
                     const offer = await peerConnection.createOffer();
+                    //const offer = await peerConnection.createOffer({offerToReceiveVideo: true});
                     await peerConnection.setLocalDescription(new RTCSessionDescription(offer));
-                    io.of('dashboard').to(dashboard_id).emit('rtc_call', {"offer": offer});
+                    peerConnection.addEventListener('connectionstatechange', event => {
+                        //console.log("PEER STATE: "+peerConnection.connectionState)
+                        if(peerConnection.connectionState == 'connected'){
+                            console.log('connected!');
+                        }
+                    });
+                    peerConnection.addEventListener('icecandidate', event => {
+                        if (!event || !event.candidate) return;
+                        self.socket.emit("ice_candidate", {"sender": self.socket.id, "candidate": event.candidate, "receiver": dashboard_id}); 
+                    });
+
+                    this.socket.emit('rtc_call', {"sender": this.socket.id,"offer": offer, 'receiver': dashboard_id});
+                    return peerConnection;
                 },
                 async answer_dashboard(data){
-                    dashboard_id = data['dashboard_id']
-                    aw
+                    console.log("ANSWER DASHBOARD");
+                    self = this;
+                    receiver_id = data['receiver']
+                    await self.dashboards[receiver_id]['peerConnection'].setRemoteDescription(
+                        new RTCSessionDescription(data.answer)
+                    );
                 }
             }
         }

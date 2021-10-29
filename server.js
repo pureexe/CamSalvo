@@ -1,6 +1,7 @@
 const app = require('http').createServer(handler)
 const fs = require('fs');
 const config = require('./config.json')
+const chalk = require('chalk');
 const io = require('socket.io')(app, {cors: {
     origin: "*",
     methods: ["GET", "POST"]
@@ -38,14 +39,20 @@ devices = {
 
 // socket implementation
 io.of('dashboard').on('connection', (socket)=>{
+    console.log(chalk.cyan('DASHBOARD: ')+chalk.green('CONNECT')+'/'+socket.handshake.address);
     if(!(socket.id in devices["dashboard"])){
-        devices['dashboard'][socket.id] = socket
+        devices['dashboard'][socket.id] = {name: "", address: socket.handshake.address}
         cameras = Object.keys(devices['camera']);
-        socket.emit('add_camera', {"camera_ids" : cameras})
+        socket.emit('add_camera', {"devices_camera" : devices.camera})
         cameras.forEach(id=>{
-            devices['camera'][id].emit('add_dashboard', {"dashboard_ids": [socket.id]});
+          io.of('camera').to(id).emit('add_dashboard', {"dashboard_ids": [socket.id]});
+        })
+        socket.on('rtc_answer', data=>{
+          console.log(chalk.cyan('DASHBOARD: ')+ ' WEBRTC ' + chalk.magenta("ACCEPT"))
+          io.of('camera').to(data['sender']).emit('rtc_answer', data)
         })
         socket.on('disconnect',function(){
+            console.log(chalk.cyan('DASHBOARD: ')+chalk.red('DISCONNECT')+'/'+socket.handshake.address);
             if(socket.id in devices['dashboard']){
               delete devices['dashboard'][socket.id]
             }
@@ -54,19 +61,30 @@ io.of('dashboard').on('connection', (socket)=>{
     }
 });
 io.of('camera').on('connection', (socket)=>{
-    if(!(socket.id in devices.camera)){
-        devices['camera'][socket.id] = socket
-        dashboards = Object.keys(devices['dashboard']);
-        socket.emit('add_dashboard', {"dashboard_ids" : [dashboards]})
-        dashboards.forEach(id=>{
-            io.of('dashboard').to(id).emit('add_dashboard', {"cameras_id": [socket.id]});
-        });
-    }
+    socket.on('set_config',data=>{
+      console.log(chalk.yellow('Camera: ') + chalk.green('CONNECT')+'/'+socket.handshake.address+'/'+data['name']);
+      camera = {'address': socket.handshake.address}
+      Object.keys(data).forEach(k=>{camera[k]=data[k]})
+      devices.camera[socket.id] = camera
+      cam_info = {}
+      cam_info[socket.id] = camera
+      io.of('dashboard').emit('add_camera', {"devices_camera" : cam_info});
+      socket.emit('add_dashboard', {"dashboard_ids": Object.keys(devices.dashboard)});
+    });
+    socket.on('rtc_call', data=>{
+      console.log(chalk.yellow('Camera: ')+ ' WEBRTC ' + chalk.magenta("CALL"))
+      io.of('dashboard').to(data['receiver']).emit('rtc_call', data)
+    })
+    socket.on('ice_candidate', data=>{
+      console.log(chalk.yellow('Camera: ')+ ' WEBRTC ' + chalk.magenta("ICE CANDIDATE"))
+      io.of('dashboard').to(data['receiver']).emit('receive_ice_candaite', data)
+    })
     socket.on('disconnect',function(){
-        if(socket.id in devices['dashboard']){
-          delete devices['dashboard'][socket.id]
-        }
-        io.of('camera').emit('remove_camera', {"camera_ids": [socket.id]});
+      if(socket.id in devices['camera']){
+        console.log(chalk.yellow('Camera: ') + chalk.red('DISCONNECT')+'/'+socket.handshake.address+'/'+devices['camera'][socket.id]['name']);
+        delete devices['camera'][socket.id]
+      }
+      io.of('camera').emit('remove_camera', {"camera_ids": [socket.id]});
     });
 });
 /*

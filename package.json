@@ -18,6 +18,7 @@
   },
   "homepage": "https://github.com/pureexe/CamSalvo#readme",
   "dependencies": {
+    "chalk": "^4.1.2",
     "socket.io": "^4.3.1"
   }
 }
