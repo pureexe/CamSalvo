@@ -63,7 +63,7 @@
                           <img src="https://unsplash.it/300/200/?random&pic=1" alt="">
                         </figure>
                         -->
-                        <video class="video is-4by3" ref="video-canvas"></video>
+                        <video autoplay class="video is-4by3" ref="video-canvas"></video>
                     </div>
                     <footer class="card-footer">
                         <a class="card-footer-item">
@@ -98,9 +98,7 @@
     <!-- jQuery first, then Popper.js, then Bootstrap JS -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.3.2/socket.io.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/vue/3.2.20/vue.global.min.js"></script>
-    <script>
- 
-    </script>
+    <script src="https://unpkg.com/peerjs@1.3.1/dist/peerjs.min.js"></script>
     <script>
         const DashboardApp = {
             data(){
@@ -113,7 +111,9 @@
                       title: '',
                       subtitle: '',
                       type: 'is-danger'
-                    }
+                    },
+                    peer: undefined,
+                    device: {}
                 }
             },
             mounted(){
@@ -132,13 +132,24 @@
                     console.log(socket_url);
                     this.socket = io(socket_url)
                     this.socket.on('connect', ()=>{
-                        console.log("CONNECTED")
+                        self.peer = new Peer();
+                        self.peer.on('open', peerId => {
+                            self.device['peer_id'] = peerId;
+                            self.socket.emit('set_config', {'peer_id': peerId});
+                        })
+                        self.peer.on('call', call=>{
+                          console.log("RECEIVE CALLED");
+                          call.answer();
+                          call.on('stream', remoteStreae=>{
+                            self.$refs['video-canvas'].srcObject = remoteStreae;                    
+                          })
+                        })
                     });
                     this.socket.on('connect_error', error=>self.dialogue('could not conenct to socket server. please verify that node.js is up and running with proper config.js'))
                     this.socket.on('reconnect_failed', error=>self.dialogue('internete disconnect! you might move your phone to far away from internet access point'))
                     this.socket.on('add_camera', this.add_camera)
                     this.socket.on('remove_camera', this.remove_camera)                    
-                    this.socket.on('rtc_call', this.answer_camera)
+                    this.socket.on('rtc_call', this.answer_camera)                    
                 },
                 dialogue(title, subtitle='', type='is-danger'){
                   this.page = 'dialogue'

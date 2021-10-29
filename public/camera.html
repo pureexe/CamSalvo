@@ -32,6 +32,7 @@
     <!-- jQuery first, then Popper.js, then Bootstrap JS -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.3.2/socket.io.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/vue/3.2.20/vue.global.min.js"></script>
+    <script src="https://unpkg.com/peerjs@1.3.1/dist/peerjs.min.js"></script>
     <script>
  
     </script>
@@ -45,7 +46,8 @@
                     page: "setup",
                     device: {
                         name: "",
-                    }
+                    },
+                    peer: undefined
                 }
             },
             mounted(){
@@ -62,7 +64,11 @@
                     console.log(socket_url);
                     this.socket = io(socket_url)
                     this.socket.on('connect', ()=>{
-                        self.socket.emit('set_config', {'name': self.device.name});
+                        self.peer = new Peer();
+                        self.peer.on('open', peerId => {
+                            self.device['peer_id'] = peerId
+                            self.socket.emit('set_config', {'name': self.device.name, 'peer_id': peerId});
+                        })
                     });
                     this.socket.on('connect_error', error=>self.dialogue('could not conenct to socket server. please verify that node.js is up and running with proper config.js'))
                     this.socket.on('reconnect_failed', error=>self.dialogue('internete disconnect! you might move your phone to far away from internet access point'))
@@ -74,12 +80,12 @@
                     alert(message);
                 },
                 async add_dashboard(data){
+                    console.log("ADD DASHBVOARD")
                     self = this;
-                    console.log(self.dashboards);
-                    data['dashboard_ids'].forEach(async id=>{
+                    Object.keys(data['devices_dashboard']).forEach(id=>{
                         if(!(id in self.dashboards)){
-                            peer = await self.call_dashboard(id);
-                            self.dashboards[id] = {'peerConnection': peer}
+                            self.dashboards[id] = data['devices_dashboard'][id]
+                            self.call_dashboard(id)
                         }
                     })
                 }, 
@@ -108,31 +114,11 @@
                 async call_dashboard(dashboard_id){
                     // make RTC call to dashboard
                     self = this;
-                    peerConnection = new RTCPeerConnection(this.config.web_rtc);
-                    /*
-                    this.device['stream'].getTracks().forEach(track =>{
-                        console.log("ADD TRACK");
-                        peerConnection.addTrack(track, self.device['stream'])
-                    });
-                    */
-                    peerConnection.addTransceiver(this.device['track']);
-                    peerConnection.getTransceivers().forEach(t => t.direction = 'sendonly');
-                    const offer = await peerConnection.createOffer();
-                    //const offer = await peerConnection.createOffer({offerToReceiveVideo: true});
-                    await peerConnection.setLocalDescription(new RTCSessionDescription(offer));
-                    peerConnection.addEventListener('connectionstatechange', event => {
-                        //console.log("PEER STATE: "+peerConnection.connectionState)
-                        if(peerConnection.connectionState == 'connected'){
-                            console.log('connected!');
-                        }
-                    });
-                    peerConnection.addEventListener('icecandidate', event => {
-                        if (!event || !event.candidate) return;
-                        self.socket.emit("ice_candidate", {"sender": self.socket.id, "candidate": event.candidate, "receiver": dashboard_id}); 
-                    });
-
-                    this.socket.emit('rtc_call', {"sender": this.socket.id,"offer": offer, 'receiver': dashboard_id});
-                    return peerConnection;
+                    console.log("START CALLED");
+                    var call = this.peer.call(this.dashboards[dashboard_id]["peer_id"], this.device['stream']);
+                    call.on('stream', remoteStream=>{
+                        console.log("CALLBACK STREAM")
+                    }); //ignore stream data from dashboard
                 },
                 async answer_dashboard(data){
                     console.log("ANSWER DASHBOARD");
@@ -144,7 +130,7 @@
                 }
             }
         }
-        Vue.createApp(CameraApp).mount('#app')        
+        window.cameraApp = Vue.createApp(CameraApp).mount('#app')        
     </script>
 
   </body>
