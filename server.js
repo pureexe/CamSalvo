@@ -2,10 +2,13 @@ const app = require('http').createServer(handler)
 const fs = require('fs');
 const config = require('./config.json')
 const chalk = require('chalk');
-const io = require('socket.io')(app, {cors: {
-    origin: "*",
-    methods: ["GET", "POST"]
-}});
+const io = require('socket.io')(app, {
+    cors: {
+        origin: "*",
+        methods: ["GET", "POST"]
+    },
+    maxHttpBufferSize: 1e8
+});
 // utility function
 function handler (req, res) {
   fs.readFile(
@@ -76,6 +79,7 @@ io.of('dashboard').on('connection', (socket)=>{
     socket.on('capture',data=>{
         if(data['camera_id'] == 'all'){
             io.of('camera').emit('capture',{"shot_id": shot_id})
+            shot_id++;
         }else{
             io.of('camera').to(data['camera_id']).emit('capture',{})
         }
@@ -101,11 +105,12 @@ io.of('camera').on('connection', (socket)=>{
     });    
     socket.on('save_image', (data)=>{
         device_name = devices.camera[data['camera_id']]['name'];
+        console.log(chalk.yellow('Camera: ') + chalk.magenta(device_name) + ' saving image...');
         folder = config.path.images+'/'+device_name
         ensureExists(folder,0777,()=>{
             filename =  (new Date()).toISOString().replaceAll(":","-").replaceAll("T","_").replaceAll("Z","") + '.jpg'
             if('shot_id' in data){
-                filename = (''+data['shot_id']).padStart(4, "0");
+                filename = (''+data['shot_id']).padStart(4, "0") + '.jpg';
             }
             saveImage(folder+'/'+filename, data['image_data'])
         });

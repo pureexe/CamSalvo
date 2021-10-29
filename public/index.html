@@ -179,7 +179,11 @@
                     this.socket.emit('capture',{'camera_id':socket_id})
                 },
                 capture_all(){
-                    this.socket.emit('cature',{'camera_id': 'all'});
+                    Object.keys(this.cameras).forEach((socket_id)=>{
+                      self.cameras[socket_id].capturing = true 
+                      setTimeout(()=>self.cameras[socket_id].capturing = false ,200)
+                    })
+                    this.socket.emit('capture',{'camera_id': 'all'});
                 }
             }
         }

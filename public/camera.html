@@ -80,7 +80,6 @@
                     alert(message);
                 },
                 async add_dashboard(data){
-                    console.log("ADD DASHBVOARD")
                     self = this;
                     Object.keys(data['devices_dashboard']).forEach(id=>{
                         if(!(id in self.dashboards)){
@@ -126,8 +125,10 @@
                         imageWidth: this.device['capabilities'].width.max,
                         redEyeReduction: 'never'
                     }
+                    console.log(captureConfig);
                     imageCapture  = new ImageCapture(this.device['track'])
                     blob = await imageCapture.takePhoto(captureConfig);
+                    console.log("CAPTURED!!!")
                     reader = new window.FileReader();
                     reader.readAsDataURL(blob);
                     reader.onloadend = ()=>{
