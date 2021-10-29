@@ -94,7 +94,7 @@ io.of('dashboard').on('connection', (socket)=>{
 });
 io.of('camera').on('connection', (socket)=>{
     socket.on('set_config',data=>{
-      console.log(chalk.yellow('Camera: ') + chalk.green('CONNECT')+'/'+socket.handshake.address+'/'+data['name']);
+      console.log(chalk.yellow('Camera: ') + chalk.green('CONNECT')+'/'+socket.handshake.address+'/'+chalk.magenta(data['name']));
       camera = {'address': socket.handshake.address}
       Object.keys(data).forEach(k=>{camera[k]=data[k]})
       devices.camera[socket.id] = camera
@@ -117,7 +117,7 @@ io.of('camera').on('connection', (socket)=>{
     })
     socket.on('disconnect',function(){
       if(socket.id in devices['camera']){
-        console.log(chalk.yellow('Camera: ') + chalk.red('DISCONNECT')+'/'+socket.handshake.address+'/'+devices['camera'][socket.id]['name']);
+        console.log(chalk.yellow('Camera: ') + chalk.red('DISCONNECT')+'/'+socket.handshake.address+'/'+chalk.magenta(devices['camera'][socket.id]['name']));
         delete devices['camera'][socket.id]
       }
       io.of('dashboard').emit('remove_camera', {"camera_ids": [socket.id]});

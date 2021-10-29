@@ -51,6 +51,10 @@
                 }
             },
             mounted(){
+                device_name = localStorage.getItem('device_name');
+                if(device_name){
+                    this.device.name = device_name
+                }
             },
             methods: {
                 async init_config(){
@@ -95,6 +99,7 @@
                     })
                 },
                 async page_camera(){
+                    localStorage.setItem('device_name', this.device.name);
                     this.page = 'camera';
                     await this.init_config();
                     await this.init_camera();
