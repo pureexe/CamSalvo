@@ -20,7 +20,6 @@ function handler (req, res) {
     }
   );
 }
-app.listen(config.socket_server.port);
 function createClinetConfig(){
   client_config = JSON.parse(JSON.stringify(config)) //deep copy object
   delete client_config['path']; //delete sensitive information
@@ -28,13 +27,38 @@ function createClinetConfig(){
     if(err) throw err;
   })
 }
-createClinetConfig()
+function ensureExists(path, mask, cb) {
+    if (typeof mask == 'function') { // Allow the `mask` parameter to be optional
+        cb = mask;
+        mask = 0777;
+    }
+    fs.mkdir(path, mask, function(err) {
+        if (err) {
+            if (err.code == 'EEXIST') cb(null); // Ignore the error if the folder already exists
+            else cb(err); // Something else went wrong
+        } else cb(null); // Successfully created folder
+    });
+}
+function saveImage(filename, base64data){
+    setTimeout(function(){ //use non-blocking io
+      //base64data = base64data.replace(/^data:image\/jpge;base64,/, "");
+      base64data = base64data.split(';base64,').pop()
+      fs.writeFile(filename, base64data, {encoding: 'base64'}, function(err) {
+        console.log('File created: '+ filename);
+      });
+    },0); 
+}
 
+// run util function
+app.listen(config.socket_server.port);
+createClinetConfig();
+ensureExists(config.path.images,0777,()=>{});
 // global variable
 devices = {
     dashboard: {},
     camera: {},
 }
+shot_id = 0;
 
 
 // socket implementation
@@ -49,6 +73,13 @@ io.of('dashboard').on('connection', (socket)=>{
       socket.emit('add_camera', {"devices_camera" : devices['camera']})
       io.of('camera').emit('add_dashboard', {"devices_dashboard" : dashboard_info});
     });
+    socket.on('capture',data=>{
+        if(data['camera_id'] == 'all'){
+            io.of('camera').emit('capture',{"shot_id": shot_id})
+        }else{
+            io.of('camera').to(data['camera_id']).emit('capture',{})
+        }
+    })
     socket.on('disconnect',function(){
         console.log(chalk.cyan('DASHBOARD: ')+chalk.red('DISCONNECT')+'/'+socket.handshake.address);
         if(socket.id in devices['dashboard']){
@@ -68,6 +99,17 @@ io.of('camera').on('connection', (socket)=>{
       socket.emit('add_dashboard', {"devices_dashboard" : devices['dashboard']})
       io.of('dashboard').emit('add_camera', {"devices_camera" : cam_info});
     });    
+    socket.on('save_image', (data)=>{
+        device_name = devices.camera[data['camera_id']]['name'];
+        folder = config.path.images+'/'+device_name
+        ensureExists(folder,0777,()=>{
+            filename =  (new Date()).toISOString().replaceAll(":","-").replaceAll("T","_").replaceAll("Z","") + '.jpg'
+            if('shot_id' in data){
+                filename = (''+data['shot_id']).padStart(4, "0");
+            }
+            saveImage(folder+'/'+filename, data['image_data'])
+        });
+    })
     socket.on('disconnect',function(){
       if(socket.id in devices['camera']){
         console.log(chalk.yellow('Camera: ') + chalk.red('DISCONNECT')+'/'+socket.handshake.address+'/'+devices['camera'][socket.id]['name']);
@@ -76,16 +118,9 @@ io.of('camera').on('connection', (socket)=>{
       io.of('dashboard').emit('remove_camera', {"camera_ids": [socket.id]});
     });
 });
+
 /*
-function saveImage(filename, base64data){
-  setTimeout(function(){ //use non-blocking io
-    //base64data = base64data.replace(/^data:image\/jpge;base64,/, "");
-    base64data = base64data.split(';base64,').pop()
-    fs.writeFile('image.jpg', base64data, {encoding: 'base64'}, function(err) {
-      console.log('File created');
-    });
-  },0); 
-}
+
 */
 /*
 dashboard_device = {}

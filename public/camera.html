@@ -23,7 +23,7 @@
               </div>
             </div>
         </section>
-        <div v-show="page == 'camera'" ref="page-camera">
+        <div v-show="page == 'camera'" ref="page-camera" >
             <video autoplay style="width:100vw;height:100vh;" ref="video-canvas"></video>
         </div>
     </div>
@@ -74,7 +74,7 @@
                     this.socket.on('reconnect_failed', error=>self.dialogue('internete disconnect! you might move your phone to far away from internet access point'))
                     this.socket.on('add_dashboard', this.add_dashboard)
                     this.socket.on('remove_dashboard', this.remove_dashboard) 
-                    this.socket.on('rtc_answer', this.answer_dashboard)                    
+                    this.socket.on('capture', this.capture) 
                 },
                 dialogue(message){
                     alert(message);
@@ -99,7 +99,8 @@
                     this.page = 'camera';
                     await this.init_config();
                     await this.init_camera();
-                    //await this.$refs['page-camera'].requestFullscreen({navigationUI: 'hide'}).catch(() => dialogue('Cannot request fullscreen'))  
+                    await this.$refs['page-camera'].requestFullscreen({navigationUI: 'hide'}).catch(() => dialogue('Cannot request fullscreen')) 
+                    screen.orientation.lock('landscape'); 
                     await this.init_socket();
                 },
                 async init_camera(){
@@ -114,19 +115,26 @@
                 async call_dashboard(dashboard_id){
                     // make RTC call to dashboard
                     self = this;
-                    console.log("START CALLED");
                     var call = this.peer.call(this.dashboards[dashboard_id]["peer_id"], this.device['stream']);
-                    call.on('stream', remoteStream=>{
-                        console.log("CALLBACK STREAM")
-                    }); //ignore stream data from dashboard
+                    call.on('stream', remoteStream=>{}); //ignore stream data from dashboard
                 },
-                async answer_dashboard(data){
-                    console.log("ANSWER DASHBOARD");
+                async capture(data){
                     self = this;
-                    receiver_id = data['receiver']
-                    await self.dashboards[receiver_id]['peerConnection'].setRemoteDescription(
-                        new RTCSessionDescription(data.answer)
-                    );
+                    captureConfig = {
+                        fillLightMode: 'off',                              
+                        imageHeight: this.device['capabilities'].height.max,
+                        imageWidth: this.device['capabilities'].width.max,
+                        redEyeReduction: 'never'
+                    }
+                    imageCapture  = new ImageCapture(this.device['track'])
+                    blob = await imageCapture.takePhoto(captureConfig);
+                    reader = new window.FileReader();
+                    reader.readAsDataURL(blob);
+                    reader.onloadend = ()=>{
+                        to_save = {'image_data': reader.result, 'camera_id': self.socket.id}
+                        if('shot_id' in data) to_save['shot_id'] = data['shot_id'];
+                        this.socket.emit('save_image', to_save);
+                    }                    
                 }
             }
         }

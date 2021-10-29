@@ -7,7 +7,11 @@
 
     <!-- Bluma -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bulma@0.9.3/css/bulma.min.css">
-    
+    <style>
+        .capturing {
+            filter: opacity(0.5);
+        }
+    </style>
     <title>Dashboard - CamSalvo</title>
   </head>
   <body>
@@ -35,7 +39,7 @@
                   <div class="navbar-item">
                     <div class="buttons">
                       <a class="button is-primary">
-                        <strong>Capture all!</strong>
+                        <strong v-on:click="capture_all()">Capture all!</strong>
                       </a>
                     </div>
                   </div>
@@ -57,11 +61,11 @@
                         </span>
                       </button>
                     </header>
-                    <div class="card-image">                      
-                        <video autoplay class="video is-4by3" :ref="`video-${camera.peer_id}`"></video>
+                    <div class="card-image" :class="{ capturing: camera.capturing }">                      
+                        <video autoplay class="video is-4by3" style="margin-left: auto;margin-right: auto; display: block;"  :ref="`video-${camera.peer_id}`"></video>
                     </div>
                     <footer class="card-footer">
-                        <a class="card-footer-item">
+                        <a class="card-footer-item" v-on:click="capture(camera_socket)">
                           Capture
                         </a>
                     </footer>
@@ -139,8 +143,8 @@
                           })
                         })
                     });
-                    this.socket.on('connect_error', error=>self.dialogue('could not conenct to socket server. please verify that node.js is up and running with proper config.js'))
-                    this.socket.on('reconnect_failed', error=>self.dialogue('internete disconnect! you might move your phone to far away from internet access point'))
+                    this.socket.on('connect_error', error=>self.dialogue('Could not conenct to socket server!', ' please verify that node.js is up and running with proper config.json'))
+                    this.socket.on('reconnect_failed', error=>self.dialogue('Internete disconnect!', 'you might move your phone to far away from internet access point'))
                     this.socket.on('add_camera', this.add_camera)
                     this.socket.on('remove_camera', this.remove_camera)                    
                     this.socket.on('rtc_call', this.answer_camera)                    
@@ -156,6 +160,7 @@
                     Object.keys(data['devices_camera']).forEach(id=>{
                         if(!(id in self.cameras)){
                             self.cameras[id] = data['devices_camera'][id]
+                            self.cameras[id]['capturing'] = false
                         }
                     })
                 }, 
@@ -167,52 +172,14 @@
                     })
 
                 },
-                async answer_camera(data){
-                  // answer camera RTC
-                  console.log('GET RTC CALLED') 
-                  console.log(data);                 
-                  self = this;
-                  camera_id = data['sender']
-                  if(!(camera_id in this.cameras)){
-                    this.dialogue('Camera sender not register')
-                  }
-                  peerConnection = new RTCPeerConnection(this.config.web_rtc);
-                  peerConnection.addEventListener('connectionstatechange', event => {
-                        console.log("PEER STATE: "+peerConnection.connectionState)
-                  });
-                  /*
-                  peerConnection.addEventListener('icecandidate', event => {
-                    if (!event || !event.candidate) return;
-                    socket.emit("iceCandidate", {"candidate":event.candidate);
-                  });
-                  */
-                  
-                  peerConnection.onicegatheringstatechange = (e)=>{console.log("onicegatheringstatechange change"); console.log(e)}
-                  peerConnection.onsignalingstatechange = (e)=>{console.log("onsignalingstatechange change"); console.log(e)}
-                  peerConnection.onnegotiationneeded = (e)=>{console.log("onnegotiationneeded change"); console.log(e)}
-                  
-                  this.socket.on("receive_ice_candaite", (data)=>{
-                    peerConnection.addIceCandidate(new RTCIceCandidate(data['candidate']))
-                  });
-                  await peerConnection.setRemoteDescription(new RTCSessionDescription(data.offer));
-                  /*
-                  peerConnection.ontrack = stream => {
-                    console.log("ON TRACK STREAM")
-                    self.$refs['video-canvas'].srcObject = stream;                    
-                  }
-                  */
-                  peerConnection.addEventListener('track', async (event) => { 
-                    console.log("TRACKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKK");
-                  });
-                  peerConnection.addTransceiver('video');
-                  peerConnection.getTransceivers().forEach(t => t.direction = 'recvonly');
-                  answer = await peerConnection.createAnswer();
-                  await peerConnection.setLocalDescription(new RTCSessionDescription(answer));
-
-                  self.cameras[camera_id]['peerConnection'] = peerConnection 
-                  delete data['offer'];
-                  data['answer'] = answer
-                  this.socket.emit('rtc_answer',data)
+                capture(socket_id){
+                    self = this
+                    self.cameras[socket_id].capturing = true 
+                    setTimeout(()=>self.cameras[socket_id].capturing = false ,200)
+                    this.socket.emit('capture',{'camera_id':socket_id})
+                },
+                capture_all(){
+                    this.socket.emit('cature',{'camera_id': 'all'});
                 }
             }
         }
