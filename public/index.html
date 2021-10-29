@@ -45,11 +45,11 @@
       </header>
       <main>
           <div class="columns is-multiline" style="padding: 10px;">
-              <div class="column is-one-quarter-desktop is-half-tablet">
+              <div class="column is-one-quarter-desktop is-half-tablet" v-for="(camera, camera_socket, index) in cameras" v-bind:key="camera_socket">
                 <div class="card">
                   <header class="card-header">
                       <p class="card-header-title">
-                        Card header
+                        {{camera.name}}
                       </p>
                       <button class="card-header-icon" aria-label="more options">
                         <span class="icon">
@@ -57,13 +57,8 @@
                         </span>
                       </button>
                     </header>
-                    <div class="card-image">
-                        <!-- 
-                        <figure class="image is-3by2">
-                          <img src="https://unsplash.it/300/200/?random&pic=1" alt="">
-                        </figure>
-                        -->
-                        <video autoplay class="video is-4by3" ref="video-canvas"></video>
+                    <div class="card-image">                      
+                        <video autoplay class="video is-4by3" :ref="`video-${camera.peer_id}`"></video>
                     </div>
                     <footer class="card-footer">
                         <a class="card-footer-item">
@@ -138,10 +133,9 @@
                             self.socket.emit('set_config', {'peer_id': peerId});
                         })
                         self.peer.on('call', call=>{
-                          console.log("RECEIVE CALLED");
                           call.answer();
-                          call.on('stream', remoteStreae=>{
-                            self.$refs['video-canvas'].srcObject = remoteStreae;                    
+                          call.on('stream', remoteStream=>{
+                            self.$refs['video-'+call.peer].srcObject = remoteStream;                    
                           })
                         })
                     });
@@ -166,8 +160,12 @@
                     })
                 }, 
                 remove_camera(data){
-                    console.log('remove camera')
-                    console.log(data)
+                    data['camera_ids'].forEach(id=>{
+                        if(id in self.cameras){
+                            delete self.cameras[id];
+                        }
+                    })
+
                 },
                 async answer_camera(data){
                   // answer camera RTC

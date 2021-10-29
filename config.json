@@ -16,7 +16,7 @@
         }
     },
     "socket_server": {
-        "address": "192.168.1.2",
+        "address": "10.204.227.47",
         "port": 8192
     },
     "web_rtc": {

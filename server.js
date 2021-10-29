@@ -54,11 +54,10 @@ io.of('dashboard').on('connection', (socket)=>{
         if(socket.id in devices['dashboard']){
           delete devices['dashboard'][socket.id]
         }
-        io.of('dashboard').emit('remove_dashboard', {"dashboard_ids": [socket.id]});
+        io.of('camera').emit('remove_dashboard', {"dashboard_ids": [socket.id]});
     });
 });
 io.of('camera').on('connection', (socket)=>{
-    console.log("ADD DASHBOARD")
     socket.on('set_config',data=>{
       console.log(chalk.yellow('Camera: ') + chalk.green('CONNECT')+'/'+socket.handshake.address+'/'+data['name']);
       camera = {'address': socket.handshake.address}
@@ -74,7 +73,7 @@ io.of('camera').on('connection', (socket)=>{
         console.log(chalk.yellow('Camera: ') + chalk.red('DISCONNECT')+'/'+socket.handshake.address+'/'+devices['camera'][socket.id]['name']);
         delete devices['camera'][socket.id]
       }
-      io.of('camera').emit('remove_camera', {"camera_ids": [socket.id]});
+      io.of('dashboard').emit('remove_camera', {"camera_ids": [socket.id]});
     });
 });
 /*
