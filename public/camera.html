@@ -67,7 +67,7 @@
                     console.log(socket_url);
                     this.socket = io(socket_url)
                     this.socket.on('connect', ()=>{
-                        self.peer = new Peer();
+                        self.peer = new Peer(self.config.peer);
                         self.peer.on('open', peerId => {
                             self.device['peer_id'] = peerId
                             self.socket.emit('set_config', {'name': self.device.name, 'peer_id': peerId});
